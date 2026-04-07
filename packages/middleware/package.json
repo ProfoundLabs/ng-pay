@@ -1,0 +1,56 @@
+{
+  "name": "@ng-pay/middleware",
+  "version": "0.1.0",
+  "description": "Express, NestJS and Fastify webhook middleware for ng-pay",
+  "keywords": ["nigeria", "payments", "webhook", "express", "nestjs", "fastify", "middleware"],
+  "author": "ng-pay contributors",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./express": {
+      "import": "./dist/express.js",
+      "types": "./dist/express.d.ts"
+    },
+    "./nestjs": {
+      "import": "./dist/nestjs.js",
+      "types": "./dist/nestjs.d.ts"
+    },
+    "./fastify": {
+      "import": "./dist/fastify.js",
+      "types": "./dist/fastify.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup --config tsup.config.ts --clean",
+    "dev": "tsup --config tsup.config.ts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@ng-pay/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@nestjs/common": ">=9.0.0",
+    "express": ">=4.0.0",
+    "fastify": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": { "optional": true },
+    "@nestjs/common": { "optional": true },
+    "fastify": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

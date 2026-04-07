@@ -1,0 +1,29 @@
+{
+  "name": "@ng-pay/core",
+  "version": "0.1.0",
+  "description": "Core types, HTTP client, and error handling for the ng-pay unified Nigerian fintech SDK",
+  "keywords": ["nigeria", "fintech", "paystack", "flutterwave", "payments", "sdk"],
+  "author": "ng-pay contributors",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
