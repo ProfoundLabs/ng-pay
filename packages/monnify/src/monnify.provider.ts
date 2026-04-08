@@ -38,7 +38,7 @@ import type {
 export interface MonnifyConfig {
   apiKey: string;
   secretKey: string;
-  contractCode: string;       // Your Monnify merchant contract code
+  contractCode: string;
   /**
    * Whether to use the Monnify sandbox environment.
    *
