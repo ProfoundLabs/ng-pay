@@ -44,7 +44,8 @@ import type {
 export type PaystackPreferredBank =
   | 'wema-bank'      // Wema Bank — most widely available
   | 'titan-paystack' // Titan Trust Bank
-  | 'sterling-bank'; // Sterling Bank
+  | 'sterling-bank' // Sterling Bank
+  | 'test-bank';     // Test bank for sandbox mode (only available when using a test secret key)
 
 export interface PaystackConfig {
   secretKey: string;
@@ -193,8 +194,11 @@ export class PaystackProvider implements NgPayProvider {
     // Step 2: create dedicated account
     // Bank can be overridden per-call via metadata.preferredBank, or falls back
     // to the instance-level config (default: 'wema-bank').
-    const preferredBank = (params.metadata?.['preferredBank'] as PaystackPreferredBank | undefined)
-      ?? this.preferredBank;
+    const isTestMode = this.secretKey.startsWith('sk_test_');
+    const preferredBank = isTestMode
+      ? 'test-bank'
+      : (params.metadata?.['preferredBank'] as PaystackPreferredBank | undefined)
+        ?? this.preferredBank;
 
       const response = await this.http.post<PaystackApiResponse<PaystackDedicatedAccount>>(
         '/dedicated_account',
