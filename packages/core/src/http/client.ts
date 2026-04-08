@@ -313,6 +313,7 @@ export class HttpClient {
 
   private codeFromStatus(status: number): NgPayError['code'] {
     if (status === 401 || status === 403) return 'UNAUTHORIZED';
+    if (status === 400) return 'INVALID_PARAMS';
     if (status === 404) return 'PAYMENT_NOT_FOUND';
     if (status === 422) return 'INVALID_PARAMS';
     if (status === 429) return 'RATE_LIMITED';
