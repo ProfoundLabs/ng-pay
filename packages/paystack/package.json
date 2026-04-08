@@ -1,8 +1,14 @@
 {
   "name": "@ng-pay/paystack",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Paystack adapter for the ng-pay unified Nigerian fintech SDK",
-  "keywords": ["nigeria", "paystack", "payments", "fintech", "sdk"],
+  "keywords": [
+    "nigeria",
+    "paystack",
+    "payments",
+    "fintech",
+    "sdk"
+  ],
   "author": "ng-pay contributors",
   "license": "MIT",
   "type": "module",
@@ -34,5 +40,8 @@
     "url": "https://github.com/ProfoundLabs/ng-pay.git",
     "directory": "packages/core"
   },
-  "files": ["dist", "README.md"]
+  "files": [
+    "dist",
+    "README.md"
+  ]
 }

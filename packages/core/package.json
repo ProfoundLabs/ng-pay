@@ -1,8 +1,15 @@
 {
   "name": "@ng-pay/core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Core types, HTTP client, and error handling for the ng-pay unified Nigerian fintech SDK",
-  "keywords": ["nigeria", "fintech", "paystack", "flutterwave", "payments", "sdk"],
+  "keywords": [
+    "nigeria",
+    "fintech",
+    "paystack",
+    "flutterwave",
+    "payments",
+    "sdk"
+  ],
   "author": "ng-pay contributors",
   "license": "MIT",
   "type": "module",
@@ -31,5 +38,8 @@
     "url": "https://github.com/ProfoundLabs/ng-pay.git",
     "directory": "packages/core"
   },
-  "files": ["dist", "README.md"]
+  "files": [
+    "dist",
+    "README.md"
+  ]
 }

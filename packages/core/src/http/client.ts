@@ -101,18 +101,19 @@ export class HttpClient {
   private declare _auth: AuthStrategy;
 
   constructor(config: HttpClientConfig) {
-    // Destructure auth out before storing config — auth lives separately
-    // as a non-enumerable property so it never appears in JSON.stringify,
-    // Object.keys, console.log, or error reporting tools like Sentry.
     const { auth, ...safeConfig } = config;
-
+  
+    // Strip undefined values so they don't clobber defaults
+    const definedConfig = Object.fromEntries(
+      Object.entries(safeConfig).filter(([, v]) => v !== undefined)
+    );
+  
     this.config = {
       timeoutMs: 30_000,
       maxRetries: 3,
       retryDelayMs: 1_000,
       headers: {},
-      ...safeConfig,
-      // auth is intentionally excluded here
+      ...definedConfig,
     } as Required<HttpClientConfig>;
 
     Object.defineProperty(this, '_auth', {
