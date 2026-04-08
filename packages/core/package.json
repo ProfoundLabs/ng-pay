@@ -1,6 +1,6 @@
 {
   "name": "@ng-pay/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Core types, HTTP client, and error handling for the ng-pay unified Nigerian fintech SDK",
   "keywords": ["nigeria", "fintech", "paystack", "flutterwave", "payments", "sdk"],
   "author": "ng-pay contributors",

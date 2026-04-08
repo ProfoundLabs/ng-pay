@@ -1,6 +1,6 @@
 {
   "name": "@ng-pay/monnify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Monnify adapter for the ng-pay unified Nigerian fintech SDK",
   "keywords": ["nigeria", "monnify", "payments", "fintech", "sdk"],
   "author": "ng-pay contributors",
