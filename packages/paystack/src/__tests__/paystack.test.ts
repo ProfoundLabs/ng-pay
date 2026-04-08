@@ -298,20 +298,52 @@ describe('PaystackProvider.createVirtualAccount — preferred bank', () => {
     });
   }
 
-  it('defaults to wema-bank when no preferredBank set', async () => {
+  it('automatically uses test-bank in test mode regardless of preferredBank config', async () => {
     const provider = new PaystackProvider({ secretKey: 'sk_test_abc123', maxRetries: 0 });
     mockCustomer();
-    mockDedicatedAccount('wema-bank');
+    mockDedicatedAccount('test-bank');
 
     await provider.createVirtualAccount({ customer: { email: 'paul@example.com' } });
 
     const body = JSON.parse(mockFetch.mock.calls[1][1].body);
-    expect(body.preferred_bank).toBe('wema-bank');
+    expect(body.preferred_bank).toBe('test-bank');
   });
 
-  it('uses preferredBank from constructor config', async () => {
+  it('ignores preferredBank config in test mode — always uses test-bank', async () => {
     const provider = new PaystackProvider({
       secretKey: 'sk_test_abc123',
+      preferredBank: 'titan-paystack', // should be ignored in test mode
+      maxRetries: 0,
+    });
+    mockCustomer();
+    mockDedicatedAccount('test-bank');
+
+    await provider.createVirtualAccount({ customer: { email: 'paul@example.com' } });
+
+    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(body.preferred_bank).toBe('test-bank');
+  });
+
+  it('ignores metadata.preferredBank override in test mode — always uses test-bank', async () => {
+    const provider = new PaystackProvider({
+      secretKey: 'sk_test_abc123',
+      maxRetries: 0,
+    });
+    mockCustomer();
+    mockDedicatedAccount('test-bank');
+
+    await provider.createVirtualAccount({
+      customer: { email: 'paul@example.com' },
+      metadata: { preferredBank: 'sterling-bank' }, // should be ignored in test mode
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(body.preferred_bank).toBe('test-bank');
+  });
+
+  it('uses preferredBank from constructor config in live mode', async () => {
+    const provider = new PaystackProvider({
+      secretKey: 'sk_live_abc123',
       preferredBank: 'titan-paystack',
       maxRetries: 0,
     });
@@ -324,10 +356,10 @@ describe('PaystackProvider.createVirtualAccount — preferred bank', () => {
     expect(body.preferred_bank).toBe('titan-paystack');
   });
 
-  it('per-call metadata.preferredBank overrides the constructor default', async () => {
+  it('per-call metadata.preferredBank overrides constructor default in live mode', async () => {
     const provider = new PaystackProvider({
-      secretKey: 'sk_test_abc123',
-      preferredBank: 'wema-bank', // instance default
+      secretKey: 'sk_live_abc123',
+      preferredBank: 'wema-bank',
       maxRetries: 0,
     });
     mockCustomer();
@@ -335,11 +367,22 @@ describe('PaystackProvider.createVirtualAccount — preferred bank', () => {
 
     await provider.createVirtualAccount({
       customer: { email: 'paul@example.com' },
-      metadata: { preferredBank: 'sterling-bank' }, // per-call override
+      metadata: { preferredBank: 'sterling-bank' },
     });
 
     const body = JSON.parse(mockFetch.mock.calls[1][1].body);
     expect(body.preferred_bank).toBe('sterling-bank');
+  });
+
+  it('defaults to wema-bank in live mode when no preferredBank set', async () => {
+    const provider = new PaystackProvider({ secretKey: 'sk_live_abc123', maxRetries: 0 });
+    mockCustomer();
+    mockDedicatedAccount('wema-bank');
+
+    await provider.createVirtualAccount({ customer: { email: 'paul@example.com' } });
+
+    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(body.preferred_bank).toBe('wema-bank');
   });
 
   it('bankCode is prefixed with pstk: to distinguish from CBN codes', async () => {
