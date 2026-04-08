@@ -364,7 +364,7 @@ export class MonnifyProvider implements NgPayProvider {
 
     this.assertSuccess(response.data, 'getBanks');
 
-    return response.data.responseBody.map((b) => ({
+    return response.data.responseBody.map((b: MonnifyBank) => ({
       id: b.code,
       name: b.name,
       code: b.code,

@@ -308,7 +308,7 @@ export class FlutterwaveProvider implements NgPayProvider {
 
     this.assertSuccess(response.data, 'getBanks');
 
-    return response.data.data.map((b) => ({
+    return response.data.data.map((b: FlutterwaveBank) => ({
       id: String(b.id),
       name: b.name,
       code: b.code,
