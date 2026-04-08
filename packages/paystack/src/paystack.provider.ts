@@ -297,8 +297,8 @@ export class PaystackProvider implements NgPayProvider {
     this.assertSuccess(response.data, 'getBanks');
 
     return response.data.data
-      .filter((b) => b.active && !b.is_deleted)
-      .map((b) => ({
+      .filter((b: PaystackBank) => b.active && !b.is_deleted)
+      .map((b: PaystackBank) => ({
         id: String(b.id),
         name: b.name,
         code: b.code,

@@ -74,3 +74,18 @@ jobs:
         run: pnpm publish --filter @ng-pay/paystack --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @ng-pay/flutterwave
+        run: pnpm publish --filter @ng-pay/flutterwave --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @ng-pay/monnify
+        run: pnpm publish --filter @ng-pay/monnify --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @ng-pay/middleware
+        run: pnpm publish --filter @ng-pay/middleware --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
