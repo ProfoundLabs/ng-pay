@@ -1,6 +1,6 @@
 {
   "name": "@ng-pay/middleware",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Express, NestJS and Fastify webhook middleware for ng-pay",
   "keywords": [
     "nigeria",

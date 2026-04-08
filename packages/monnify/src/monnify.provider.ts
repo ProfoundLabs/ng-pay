@@ -194,6 +194,7 @@ export class MonnifyProvider implements NgPayProvider {
       provider: this.name,
       reference: data.paymentReference,
       authorizationUrl: data.checkoutUrl,
+      transactionReference: data.transactionReference,
       status: 'pending',
       raw: response.data,
     };
@@ -231,6 +232,7 @@ export class MonnifyProvider implements NgPayProvider {
       channel: this.normalizeChannel(data.paymentMethod),
       paidAt: parseDate(data.paidOn ?? undefined),
       gatewayResponse: data.paymentStatus,
+      providerReference: data.transactionReference,
       raw: response.data,
     };
   }
@@ -254,8 +256,9 @@ export class MonnifyProvider implements NgPayProvider {
         customerEmail: params.customer.email,
         customerName: params.customer.name ?? params.customer.email,
         customerBvn: params.metadata?.['bvn'] ?? undefined,
-        incomeSplitConfig: [],
-        restrictPaymentSource: false,
+        incomeSplitConfig: params.incomeSplitConfig ?? [],
+        restrictPaymentSource: params.restrictPaymentSource ?? false,
+        getAllowedPaymentSources: params.allowedPaymentSources,
       }
     );
 

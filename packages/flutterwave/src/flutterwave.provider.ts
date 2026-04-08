@@ -103,6 +103,7 @@ export class FlutterwaveProvider implements NgPayProvider {
           phonenumber: params.customer.phone,
         },
         meta: params.metadata,
+        subaccounts: params.subaccounts,
         payment_options: params.channels?.map(this.channelToFlw).join(','),
         customizations: {
           title: params.description ?? 'Payment',
@@ -175,6 +176,7 @@ export class FlutterwaveProvider implements NgPayProvider {
       paidAt: parseDate(data.created_at),
       gatewayResponse: data.processor_response,
       fees: { amount: Math.round(data.app_fee * 100), currency: data.currency as Currency },
+      providerReference: data.flw_ref,
       raw: verifyResponse.data,
     };
   }
@@ -191,6 +193,9 @@ export class FlutterwaveProvider implements NgPayProvider {
       {
         email: params.customer.email,
         is_permanent: !params.expiresAt,
+        phonenumber: params.customer.phone,
+        firstname: params.customer.name?.split(' ')[0],
+        lastname: params.customer.name?.split(' ').slice(1).join(' '),
         bvn: (params.metadata?.['bvn'] as string) ?? undefined, // Required for permanent accounts
         tx_ref: reference,
         amount: params.expiresAt
@@ -477,6 +482,9 @@ export class FlutterwaveProvider implements NgPayProvider {
       'transfer.failed': 'transfer.failed',
       'subscription.activated': 'subscription.create',
       'subscription.cancelled': 'subscription.disable',
+      'charge.refunded': 'refund.processed',
+      'dispute.opened': 'charge.dispute.create',
+      'dispute.resolved': 'charge.dispute.resolve',
     };
     return map[event] ?? 'unknown';
   }

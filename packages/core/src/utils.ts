@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import type { AccountDetails, Bank } from './types/index.js';
 
 /**
  * Generates a unique payment reference.
@@ -32,4 +33,17 @@ export function parseDate(value: string | null | undefined): Date | undefined {
   if (!value) return undefined;
   const date = new Date(value);
   return isNaN(date.getTime()) ? undefined : date;
+}
+
+/**
+ * Enriches an AccountDetails object with bankName by looking it up
+ * from a banks list. Call getBanks() first, cache the result,
+ * then pass here to avoid repeated API calls.
+ */
+export function enrichAccountWithBankName(
+  account: AccountDetails,
+  banks: Bank[]
+): AccountDetails {
+  const bank = banks.find((b) => b.code === account.bankCode);
+  return { ...account, bankName: bank?.name ?? account.bankName };
 }

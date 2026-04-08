@@ -1,6 +1,6 @@
 {
   "name": "@ng-pay/flutterwave",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Flutterwave adapter for the ng-pay unified Nigerian fintech SDK",
   "keywords": [
     "nigeria",

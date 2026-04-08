@@ -115,6 +115,7 @@ export class PaystackProvider implements NgPayProvider {
         currency: params.amount.currency,
         reference,
         callback_url: params.callbackUrl,
+        split_code: params.splitCode,
         metadata: {
           ...params.metadata,
           customer_name: params.customer.name,
@@ -171,6 +172,8 @@ export class PaystackProvider implements NgPayProvider {
       paidAt: parseDate(data.paid_at ?? undefined),
       gatewayResponse: data.gateway_response,
       fees: data.fees ? { amount: data.fees, currency: data.currency as Currency } : undefined,
+      providerReference: data.authorization?.authorization_code,
+      authorizationCode: data.authorization?.authorization_code,
       raw: response.data,
     };
   }
@@ -193,14 +196,15 @@ export class PaystackProvider implements NgPayProvider {
     const preferredBank = (params.metadata?.['preferredBank'] as PaystackPreferredBank | undefined)
       ?? this.preferredBank;
 
-    const response = await this.http.post<PaystackApiResponse<PaystackDedicatedAccount>>(
-      '/dedicated_account',
-      {
-        customer: customerCode,
-        preferred_bank: preferredBank,
-        metadata: params.metadata,
-      }
-    );
+      const response = await this.http.post<PaystackApiResponse<PaystackDedicatedAccount>>(
+        '/dedicated_account',
+        {
+          customer: customerCode,
+          preferred_bank: preferredBank,
+          split_code: params.splitCode,   // undefined is stripped by JSON.stringify
+          metadata: params.metadata,
+        }
+      );
 
     this.assertSuccess(response.data, 'createVirtualAccount');
 
@@ -289,14 +293,23 @@ export class PaystackProvider implements NgPayProvider {
   // ─────────────────────────────────────────────────────────────────────────
 
   async getBanks(country = 'nigeria'): Promise<Bank[]> {
-    const response = await this.http.get<PaystackApiResponse<PaystackBank[]>>(
-      '/bank',
-      { country, use_cursor: false, perPage: 100 }
-    );
-
-    this.assertSuccess(response.data, 'getBanks');
-
-    return response.data.data
+    const allBanks: PaystackBank[] = [];
+    let page = 1;
+    let hasMore = true;
+  
+    while (hasMore) {
+      const response = await this.http.get<PaystackApiResponse<PaystackBank[]>>(
+        '/bank',
+        { country, use_cursor: false, perPage: 100, page }
+      );
+      this.assertSuccess(response.data, 'getBanks');
+      const batch = response.data.data;
+      allBanks.push(...batch);
+      hasMore = batch.length === 100;
+      page++;
+    }
+  
+    return allBanks
       .filter((b: PaystackBank) => b.active && !b.is_deleted)
       .map((b: PaystackBank) => ({
         id: String(b.id),
@@ -446,6 +459,13 @@ export class PaystackProvider implements NgPayProvider {
       'paymentrequest.success',
       'subscription.create',
       'subscription.disable',
+      'refund.processed',
+      'refund.failed',
+      'charge.dispute.create',
+      'charge.dispute.resolve',
+      'invoice.create',
+      'invoice.update',
+      'invoice.payment_failed',
     ];
     return validEvents.includes(event as WebhookEventType)
       ? (event as WebhookEventType)
