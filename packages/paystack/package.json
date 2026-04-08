@@ -1,6 +1,6 @@
 {
   "name": "@ng-pay/paystack",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Paystack adapter for the ng-pay unified Nigerian fintech SDK",
   "keywords": ["nigeria", "paystack", "payments", "fintech", "sdk"],
   "author": "ng-pay contributors",
