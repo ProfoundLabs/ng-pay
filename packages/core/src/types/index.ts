@@ -2,25 +2,81 @@
 // Money & Currency
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Currency = 'NGN' | 'GHS' | 'KES' | 'ZAR' | 'USD';
+export type Currency = "NGN" | "GHS" | "KES" | "ZAR" | "USD";
 
 export interface Money {
   amount: number;
   currency: Currency;
 }
 
+export function toCents(amount: number): number {
+  return Math.round(amount * 100);
+}
+
 export function toKobo(naira: number): number {
-  return Math.round(naira * 100);
+  return toCents(naira);
+}
+
+export function toPesewas(cedis: number): number {
+  return toCents(cedis);
+}
+
+export function toRandCents(rand: number): number {
+  return toCents(rand);
+}
+
+export function toSmallestUnit(amount: number, currency: Currency): number {
+  switch (currency) {
+    case "NGN":
+      return toKobo(amount);
+    case "GHS":
+      return toPesewas(amount);
+    case "ZAR":
+      return toRandCents(amount);
+    case "KES":
+    case "USD":
+      return toCents(amount);
+    default:
+      return toCents(amount);
+  }
+}
+
+export function fromCents(cents: number): number {
+  return cents / 100;
 }
 
 export function fromKobo(kobo: number): number {
-  return kobo / 100;
+  return fromCents(kobo);
+}
+
+export function fromPesewas(pesewas: number): number {
+  return fromCents(pesewas);
+}
+
+export function fromRandCents(cents: number): number {
+  return fromCents(cents);
+}
+
+export function fromSmallestUnit(amount: number, currency: Currency): number {
+  switch (currency) {
+    case "NGN":
+      return fromKobo(amount);
+    case "GHS":
+      return fromPesewas(amount);
+    case "ZAR":
+      return fromRandCents(amount);
+    case "KES":
+    case "USD":
+      return fromCents(amount);
+    default:
+      return fromCents(amount);
+  }
 }
 
 export function formatMoney(money: Money): string {
   const major = money.amount / 100;
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
     currency: money.currency,
     minimumFractionDigits: 2,
   }).format(major);
@@ -53,22 +109,22 @@ export interface AccountDetails {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type PaymentStatus =
-  | 'pending'
-  | 'processing'
-  | 'success'
-  | 'failed'
-  | 'abandoned'
-  | 'reversed'
-  | 'queued';
+  | "pending"
+  | "processing"
+  | "success"
+  | "failed"
+  | "abandoned"
+  | "reversed"
+  | "queued";
 
 export type PaymentChannel =
-  | 'card'
-  | 'bank'
-  | 'ussd'
-  | 'qr'
-  | 'mobile_money'
-  | 'bank_transfer'
-  | 'eft';
+  | "card"
+  | "bank"
+  | "ussd"
+  | "qr"
+  | "mobile_money"
+  | "bank_transfer"
+  | "eft";
 
 export interface CustomerInfo {
   email: string;
@@ -202,12 +258,12 @@ export interface VirtualAccount {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type TransferStatus =
-  | 'pending'
-  | 'processing'
-  | 'success'
-  | 'failed'
-  | 'reversed'
-  | 'otp';
+  | "pending"
+  | "processing"
+  | "success"
+  | "failed"
+  | "reversed"
+  | "otp";
 
 export interface TransferRecipientParams {
   name: string;
@@ -254,22 +310,22 @@ export interface TransferResponse {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type WebhookEventType =
-  | 'charge.success'
-  | 'charge.failed'
-  | 'transfer.success'
-  | 'transfer.failed'
-  | 'transfer.reversed'
-  | 'paymentrequest.success'
-  | 'subscription.create'
-  | 'subscription.disable'
-  | 'refund.processed'
-  | 'refund.failed'
-  | 'charge.dispute.create'
-  | 'charge.dispute.resolve'
-  | 'invoice.create'
-  | 'invoice.update'
-  | 'invoice.payment_failed'
-  | 'unknown';
+  | "charge.success"
+  | "charge.failed"
+  | "transfer.success"
+  | "transfer.failed"
+  | "transfer.reversed"
+  | "paymentrequest.success"
+  | "subscription.create"
+  | "subscription.disable"
+  | "refund.processed"
+  | "refund.failed"
+  | "charge.dispute.create"
+  | "charge.dispute.resolve"
+  | "invoice.create"
+  | "invoice.update"
+  | "invoice.payment_failed"
+  | "unknown";
 
 export interface WebhookEvent<T = unknown> {
   provider: string;
@@ -291,12 +347,17 @@ export interface NgPayProvider {
 
   createVirtualAccount(params: VirtualAccountParams): Promise<VirtualAccount>;
 
-  createTransferRecipient(params: TransferRecipientParams): Promise<TransferRecipient>;
+  createTransferRecipient(
+    params: TransferRecipientParams,
+  ): Promise<TransferRecipient>;
   initiateTransfer(params: TransferParams): Promise<TransferResponse>;
   verifyTransfer(reference: string): Promise<TransferResponse>;
 
   getBanks(country?: string): Promise<Bank[]>;
-  resolveAccount(accountNumber: string, bankCode: string): Promise<AccountDetails>;
+  resolveAccount(
+    accountNumber: string,
+    bankCode: string,
+  ): Promise<AccountDetails>;
 
   verifyWebhook(payload: unknown, signature: string): boolean;
   parseWebhookEvent(payload: unknown): WebhookEvent;

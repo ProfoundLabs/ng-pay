@@ -10,15 +10,16 @@ Stop rewriting your Paystack/Flutterwave/Monnify integration every time you swit
 
 ## Packages
 
-| Package | Description | Version |
-|---|---|---|
-| [`@ng-pay/core`](https://npmjs.com/package/@ng-pay/core) | Shared types, HTTP client, error classes | [![npm](https://img.shields.io/npm/v/@ng-pay/core.svg)](https://www.npmjs.com/package/@ng-pay/core) |
-| [`@ng-pay/paystack`](https://npmjs.com/package/@ng-pay/paystack) | Paystack adapter | [![npm](https://img.shields.io/npm/v/@ng-pay/paystack.svg)](https://www.npmjs.com/package/@ng-pay/paystack) |
-| [`@ng-pay/flutterwave`](https://npmjs.com/package/@ng-pay/flutterwave) | Flutterwave adapter | [![npm](https://img.shields.io/npm/v/@ng-pay/flutterwave.svg)](https://www.npmjs.com/package/@ng-pay/flutterwave) |
-| [`@ng-pay/monnify`](https://npmjs.com/package/@ng-pay/monnify) | Monnify adapter | [![npm](https://img.shields.io/npm/v/@ng-pay/monnify.svg)](https://www.npmjs.com/package/@ng-pay/monnify) |
-| [`@ng-pay/middleware`](https://npmjs.com/package/@ng-pay/middleware) | Express, NestJS & Fastify webhook helpers | [![npm](https://img.shields.io/npm/v/@ng-pay/middleware.svg)](https://www.npmjs.com/package/@ng-pay/middleware) |
+| Package                                                                | Description                               | Version                                                                                                           |
+| ---------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [`@ng-pay/core`](https://npmjs.com/package/@ng-pay/core)               | Shared types, HTTP client, error classes  | [![npm](https://img.shields.io/npm/v/@ng-pay/core.svg)](https://www.npmjs.com/package/@ng-pay/core)               |
+| [`@ng-pay/paystack`](https://npmjs.com/package/@ng-pay/paystack)       | Paystack adapter                          | [![npm](https://img.shields.io/npm/v/@ng-pay/paystack.svg)](https://www.npmjs.com/package/@ng-pay/paystack)       |
+| [`@ng-pay/flutterwave`](https://npmjs.com/package/@ng-pay/flutterwave) | Flutterwave adapter                       | [![npm](https://img.shields.io/npm/v/@ng-pay/flutterwave.svg)](https://www.npmjs.com/package/@ng-pay/flutterwave) |
+| [`@ng-pay/monnify`](https://npmjs.com/package/@ng-pay/monnify)         | Monnify adapter                           | [![npm](https://img.shields.io/npm/v/@ng-pay/monnify.svg)](https://www.npmjs.com/package/@ng-pay/monnify)         |
+| [`@ng-pay/middleware`](https://npmjs.com/package/@ng-pay/middleware)   | Express, NestJS & Fastify webhook helpers | [![npm](https://img.shields.io/npm/v/@ng-pay/middleware.svg)](https://www.npmjs.com/package/@ng-pay/middleware)   |
 
 ## Installation
+
 ```bash
 # npm
 npm install @ng-pay/core @ng-pay/paystack
@@ -31,6 +32,7 @@ yarn add @ng-pay/core @ng-pay/paystack
 ```
 
 Install the provider you need alongside core:
+
 ```bash
 npm install @ng-pay/core @ng-pay/paystack      # Paystack
 npm install @ng-pay/core @ng-pay/flutterwave   # Flutterwave
@@ -38,9 +40,10 @@ npm install @ng-pay/core @ng-pay/monnify       # Monnify
 ```
 
 ## Quick Start
+
 ```typescript
-import { PaystackProvider } from '@ng-pay/paystack';
-import { toKobo, isNgPayError } from '@ng-pay/core';
+import { PaystackProvider } from "@ng-pay/paystack";
+import { toKobo, isNgPayError } from "@ng-pay/core";
 
 const paystack = new PaystackProvider({
   secretKey: process.env.PAYSTACK_SECRET_KEY!,
@@ -48,12 +51,12 @@ const paystack = new PaystackProvider({
 
 // Initialize a payment
 const payment = await paystack.initializePayment({
-  amount: { amount: toKobo(5000), currency: 'NGN' }, // ₦5,000
+  amount: { amount: toKobo(5000), currency: "NGN" }, // ₦5,000
   customer: {
-    email: 'customer@example.com',
-    name: 'Adaobi Nwosu',
+    email: "customer@example.com",
+    name: "Adaobi Nwosu",
   },
-  callbackUrl: 'https://yourapp.com/payment/callback',
+  callbackUrl: "https://yourapp.com/payment/callback",
 });
 
 // Redirect flow
@@ -61,20 +64,21 @@ window.location.href = payment.authorizationUrl;
 
 // Inline/embedded checkout (Paystack)
 PaystackPop.setup({
-  key: 'pk_live_...',
+  key: "pk_live_...",
   accessCode: payment.accessCode,
 });
 
 // Verify after callback
 const result = await paystack.verifyPayment(payment.reference);
-if (result.status === 'success') {
-  console.log('Payment confirmed!', result.amount);
+if (result.status === "success") {
+  console.log("Payment confirmed!", result.amount);
 }
 ```
 
 ## The Key Idea — One Interface, Any Provider
 
 Every adapter implements the same `NgPayProvider` interface. Swap providers by changing one line:
+
 ```typescript
 import { PaystackProvider } from '@ng-pay/paystack';
 import { FlutterwaveProvider } from '@ng-pay/flutterwave';
@@ -94,77 +98,99 @@ const account = await provider.resolveAccount('0123456789', '058');
 
 ### Money
 
-All amounts are in the **smallest currency unit** (kobo for NGN). Always pass `currency` explicitly:
-```typescript
-import { toKobo, fromKobo, formatMoney } from '@ng-pay/core';
+All amounts are in the **smallest currency unit** (kobo for NGN, pesewas for GHS, cents for ZAR/USD/KES). Always pass `currency` explicitly:
 
-toKobo(5000)                                     // 500000
-fromKobo(500000)                                 // 5000
-formatMoney({ amount: 500000, currency: 'NGN' }) // "₦5,000.00"
+```typescript
+import {
+  toCents,
+  toKobo,
+  toPesewas,
+  toRandCents,
+  toSmallestUnit,
+  fromCents,
+  fromKobo,
+  fromPesewas,
+  fromRandCents,
+  fromSmallestUnit,
+  formatMoney,
+} from "@ng-pay/core";
+
+toCents(5000); // 500000
+toKobo(5000); // 500000
+toPesewas(5000); // 500000
+toRandCents(5000); // 500000
+toSmallestUnit(5000, "GHS"); // 500000
+fromCents(500000); // 5000
+fromKobo(500000); // 5000
+fromPesewas(500000); // 5000
+fromRandCents(500000); // 5000
+fromSmallestUnit(500000, "ZAR"); // 5000
+formatMoney({ amount: 500000, currency: "NGN" }); // "₦5,000.00"
 ```
 
 ### Payments
+
 ```typescript
 // Initialize — returns a checkout URL and provider-specific tokens
 const payment = await provider.initializePayment({
-  amount: { amount: 500_000, currency: 'NGN' },            // ₦5,000
-  customer: { email: 'user@example.com', name: 'Jane Doe' },
-  reference: 'order_123',                 // optional — auto-generated if omitted
-  callbackUrl: 'https://myapp.com/cb',
-  channels: ['card', 'bank_transfer'],    // optional — limit payment channels
-  splitCode: 'SPL_ab3defgh',             // optional — Paystack revenue split
+  amount: { amount: 500_000, currency: "NGN" }, // ₦5,000
+  customer: { email: "user@example.com", name: "Jane Doe" },
+  reference: "order_123", // optional — auto-generated if omitted
+  callbackUrl: "https://myapp.com/cb",
+  channels: ["card", "bank_transfer"], // optional — limit payment channels
+  splitCode: "SPL_ab3defgh", // optional — Paystack revenue split
 });
 
 // For redirect checkout (all providers)
 redirect(payment.authorizationUrl);
 
 // For inline checkout
-payment.accessCode           // Paystack inline SDK
-payment.transactionReference // Monnify inline SDK
+payment.accessCode; // Paystack inline SDK
+payment.transactionReference; // Monnify inline SDK
 
 // Verify
-const result = await provider.verifyPayment('order_123');
-console.log(result.status);             // 'success' | 'failed' | 'pending' | 'abandoned'
-console.log(result.amount);            // { amount: 500000, currency: 'NGN' } — always in kobo
+const result = await provider.verifyPayment("order_123");
+console.log(result.status); // 'success' | 'failed' | 'pending' | 'abandoned'
+console.log(result.amount); // { amount: 500000, currency: 'NGN' } — always in kobo
 console.log(result.providerReference); // Paystack auth code / Flutterwave flw_ref / Monnify txRef
 console.log(result.authorizationCode); // Paystack card auth code — use for recurring charges
 ```
 
 ### Virtual Accounts (NUBAN)
+
 ```typescript
 const account = await provider.createVirtualAccount({
-  customer: { email: 'user@example.com', name: 'Jane Doe' },
+  customer: { email: "user@example.com", name: "Jane Doe" },
 
   // Paystack — override the bank per account
-  metadata: { preferredBank: 'titan-paystack' }, // 'wema-bank' | 'titan-paystack' | 'sterling-bank'
+  metadata: { preferredBank: "titan-paystack" }, // 'wema-bank' | 'titan-paystack' | 'sterling-bank'
 
   // Paystack — split incoming payments
-  splitCode: 'SPL_ab3defgh',
+  splitCode: "SPL_ab3defgh",
 
   // Monnify — marketplace split config
-  incomeSplitConfig: [
-    { subAccountCode: 'MFY_SUB_...', splitPercentage: 80 },
-  ],
+  incomeSplitConfig: [{ subAccountCode: "MFY_SUB_...", splitPercentage: 80 }],
 });
 
 console.log(account.accountNumber); // "0123456789"
-console.log(account.bankName);      // "Wema Bank"
+console.log(account.bankName); // "Wema Bank"
 ```
 
 ### Transfers (Payouts)
+
 ```typescript
 // Step 1: create a recipient
 const recipient = await provider.createTransferRecipient({
-  name: 'Jane Doe',
-  accountNumber: '0123456789',
-  bankCode: '058', // GTBank
+  name: "Jane Doe",
+  accountNumber: "0123456789",
+  bankCode: "058", // GTBank
 });
 
 // Step 2: send money
 const transfer = await provider.initiateTransfer({
-  amount: { amount: 100_000, currency: 'NGN' },  // ₦1,000
+  amount: { amount: 100_000, currency: "NGN" }, // ₦1,000
   recipientCode: recipient.recipientCode,
-  description: 'Salary — April 2026',
+  description: "Salary — April 2026",
 });
 
 // Step 3: verify
@@ -173,48 +199,56 @@ console.log(status.status); // 'success' | 'pending' | 'failed'
 ```
 
 ### Banks & Account Resolution
+
 ```typescript
 // Get all Nigerian banks
 const banks = await provider.getBanks();
 // [{ name: 'GTBank', code: '058', ussd: '*737#', ... }, ...]
 
 // Resolve an account number
-const account = await provider.resolveAccount('0123456789', '058');
+const account = await provider.resolveAccount("0123456789", "058");
 console.log(account.accountName); // "JANE DOE"
 
 // Enrich with bank name (resolveAccount doesn't return bankName by default)
-import { enrichAccountWithBankName } from '@ng-pay/core';
+import { enrichAccountWithBankName } from "@ng-pay/core";
 const enriched = enrichAccountWithBankName(account, banks);
 console.log(enriched.bankName); // "Guaranty Trust Bank"
 ```
 
 ### Webhooks
+
 ```typescript
-import express from 'express';
+import express from "express";
 
 const app = express();
 
 app.post(
-  '/webhooks/paystack',
-  express.raw({ type: 'application/json' }),
+  "/webhooks/paystack",
+  express.raw({ type: "application/json" }),
   (req, res) => {
-    const signature = req.headers['x-paystack-signature'] as string;
+    const signature = req.headers["x-paystack-signature"] as string;
     const rawBody = req.body.toString();
 
     if (!provider.verifyWebhook(rawBody, signature)) {
-      return res.status(401).send('Invalid signature');
+      return res.status(401).send("Invalid signature");
     }
 
     const event = provider.parseWebhookEvent(JSON.parse(rawBody));
 
     switch (event.event) {
-      case 'charge.success':    await fulfill(event.reference!); break;
-      case 'transfer.success':  await confirmPayout(event.reference!); break;
-      case 'refund.processed':  await handleRefund(event.reference!); break;
+      case "charge.success":
+        await fulfill(event.reference!);
+        break;
+      case "transfer.success":
+        await confirmPayout(event.reference!);
+        break;
+      case "refund.processed":
+        await handleRefund(event.reference!);
+        break;
     }
 
     res.sendStatus(200);
-  }
+  },
 );
 ```
 
@@ -222,26 +256,27 @@ Or use `@ng-pay/middleware` to skip the boilerplate entirely — see the [middle
 
 ### Webhook events
 
-| Event | Meaning |
-|---|---|
-| `charge.success` | Payment completed |
-| `charge.failed` | Payment failed |
-| `transfer.success` | Payout sent |
-| `transfer.failed` | Payout failed |
-| `transfer.reversed` | Payout reversed |
-| `refund.processed` | Refund completed |
-| `refund.failed` | Refund failed |
-| `charge.dispute.create` | Dispute opened |
-| `charge.dispute.resolve` | Dispute resolved |
-| `subscription.create` | Subscription started |
-| `subscription.disable` | Subscription cancelled |
-| `invoice.create` | Invoice created |
-| `invoice.update` | Invoice updated |
+| Event                    | Meaning                |
+| ------------------------ | ---------------------- |
+| `charge.success`         | Payment completed      |
+| `charge.failed`          | Payment failed         |
+| `transfer.success`       | Payout sent            |
+| `transfer.failed`        | Payout failed          |
+| `transfer.reversed`      | Payout reversed        |
+| `refund.processed`       | Refund completed       |
+| `refund.failed`          | Refund failed          |
+| `charge.dispute.create`  | Dispute opened         |
+| `charge.dispute.resolve` | Dispute resolved       |
+| `subscription.create`    | Subscription started   |
+| `subscription.disable`   | Subscription cancelled |
+| `invoice.create`         | Invoice created        |
+| `invoice.update`         | Invoice updated        |
 | `invoice.payment_failed` | Invoice payment failed |
 
 ## Error Handling
 
 All errors extend `NgPayError` and are strongly typed:
+
 ```typescript
 import { isNgPayError, isRateLimitError } from '@ng-pay/core';
 
@@ -262,42 +297,43 @@ try {
 }
 ```
 
-| Code | Meaning |
-|---|---|
-| `INVALID_API_KEY` | Secret key is wrong or expired |
-| `INVALID_PARAMS` | Bad request parameters |
-| `DUPLICATE_REFERENCE` | Payment reference already used |
-| `PAYMENT_NOT_FOUND` | Reference doesn't exist |
-| `INSUFFICIENT_BALANCE` | Not enough balance for transfer |
-| `ACCOUNT_NOT_FOUND` | Account number resolution failed |
-| `RATE_LIMITED` | Too many requests — check `err.retryAfter` |
-| `TIMEOUT` | Request timed out after `timeoutMs` |
-| `PROVIDER_ERROR` | Provider-side 5xx error |
-| `NETWORK_ERROR` | Could not reach the provider |
+| Code                   | Meaning                                    |
+| ---------------------- | ------------------------------------------ |
+| `INVALID_API_KEY`      | Secret key is wrong or expired             |
+| `INVALID_PARAMS`       | Bad request parameters                     |
+| `DUPLICATE_REFERENCE`  | Payment reference already used             |
+| `PAYMENT_NOT_FOUND`    | Reference doesn't exist                    |
+| `INSUFFICIENT_BALANCE` | Not enough balance for transfer            |
+| `ACCOUNT_NOT_FOUND`    | Account number resolution failed           |
+| `RATE_LIMITED`         | Too many requests — check `err.retryAfter` |
+| `TIMEOUT`              | Request timed out after `timeoutMs`        |
+| `PROVIDER_ERROR`       | Provider-side 5xx error                    |
+| `NETWORK_ERROR`        | Could not reach the provider               |
 
 ## Configuration
+
 ```typescript
 // Paystack
 const paystack = new PaystackProvider({
-  secretKey: 'sk_live_...',
-  preferredBank: 'wema-bank', // default bank for virtual accounts
+  secretKey: "sk_live_...",
+  preferredBank: "wema-bank", // default bank for virtual accounts
   timeoutMs: 30_000,
   maxRetries: 3,
 });
 
 // Flutterwave
 const flutterwave = new FlutterwaveProvider({
-  secretKey: 'FLWSECK-...',
+  secretKey: "FLWSECK-...",
   timeoutMs: 30_000,
   maxRetries: 3,
 });
 
 // Monnify
 const monnify = new MonnifyProvider({
-  apiKey: 'MK_LIVE_...',
-  secretKey: '...',
-  contractCode: '...',
-  sandbox: false,   // or true for sandbox
+  apiKey: "MK_LIVE_...",
+  secretKey: "...",
+  contractCode: "...",
+  sandbox: false, // or true for sandbox
   // If omitted, inferred from key prefix: MK_TEST_ → sandbox, MK_LIVE_ → production
 });
 ```
