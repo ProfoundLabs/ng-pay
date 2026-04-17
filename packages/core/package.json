@@ -1,6 +1,6 @@
 {
   "name": "@ng-pay/core",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Core types, HTTP client, and error handling for the ng-pay unified Nigerian fintech SDK",
   "keywords": [
     "nigeria",
@@ -19,6 +19,7 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     }
   },
