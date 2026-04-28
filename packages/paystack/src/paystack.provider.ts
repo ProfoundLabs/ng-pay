@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto';
+import { createHmac } from "crypto";
 import {
   HttpClient,
   NgPayError,
@@ -25,7 +25,7 @@ import {
   type PaymentStatus,
   type TransferStatus,
   type Currency,
-} from '@ng-pay/core';
+} from "@ng-pay/core";
 import type {
   PaystackApiResponse,
   PaystackInitializeData,
@@ -35,17 +35,17 @@ import type {
   PaystackTransferData,
   PaystackBank,
   PaystackAccountResolution,
-} from './types/paystack.types.js';
+} from "./types/paystack.types.js";
 
 /**
  * Banks Paystack supports for dedicated NUBAN virtual accounts.
  * Check your Paystack dashboard to confirm which are active on your account.
  */
 export type PaystackPreferredBank =
-  | 'wema-bank'      // Wema Bank — most widely available
-  | 'titan-paystack' // Titan Trust Bank
-  | 'sterling-bank' // Sterling Bank
-  | 'test-bank';     // Test bank for sandbox mode (only available when using a test secret key)
+  | "wema-bank" // Wema Bank — most widely available
+  | "titan-paystack" // Titan Trust Bank
+  | "sterling-bank" // Sterling Bank
+  | "test-bank"; // Test bank for sandbox mode (only available when using a test secret key)
 
 export interface PaystackConfig {
   secretKey: string;
@@ -59,8 +59,28 @@ export interface PaystackConfig {
   maxRetries?: number;
 }
 
+type PaystackCustomerWithNames = PaymentParams["customer"] & {
+  firstName?: string;
+  lastName?: string;
+};
+
+type PaystackCustomerWithPhoneAndNames = PaystackCustomerWithNames & {
+  phone: string;
+};
+
+export type PaystackPaymentParams = Omit<PaymentParams, "customer"> & {
+  customer: PaystackCustomerWithNames;
+};
+
+export type PaystackVirtualAccountParams = Omit<
+  VirtualAccountParams,
+  "customer"
+> & {
+  customer: PaystackCustomerWithPhoneAndNames;
+};
+
 export class PaystackProvider implements NgPayProvider {
-  public readonly name = 'paystack';
+  public readonly name = "paystack";
   private readonly http: HttpClient;
   private readonly secretKey: string;
   private readonly preferredBank: PaystackPreferredBank;
@@ -68,26 +88,27 @@ export class PaystackProvider implements NgPayProvider {
   constructor(config: PaystackConfig) {
     if (!config.secretKey) {
       throw new ValidationError({
-        provider: 'paystack',
-        message: 'Paystack secret key is required',
-        field: 'secretKey',
+        provider: "paystack",
+        message: "Paystack secret key is required",
+        field: "secretKey",
       });
     }
 
-    if (!config.secretKey.startsWith('sk_')) {
+    if (!config.secretKey.startsWith("sk_")) {
       throw new ValidationError({
-        provider: 'paystack',
-        message: 'Invalid Paystack secret key format. Key must start with sk_live_ or sk_test_',
-        field: 'secretKey',
+        provider: "paystack",
+        message:
+          "Invalid Paystack secret key format. Key must start with sk_live_ or sk_test_",
+        field: "secretKey",
       });
     }
 
     this.secretKey = config.secretKey;
-    this.preferredBank = config.preferredBank ?? 'wema-bank';
+    this.preferredBank = config.preferredBank ?? "wema-bank";
     this.http = new HttpClient({
-      baseUrl: 'https://api.paystack.co',
-      provider: 'paystack',
-      auth: { type: 'bearer', token: config.secretKey },
+      baseUrl: "https://api.paystack.co",
+      provider: "paystack",
+      auth: { type: "bearer", token: config.secretKey },
       timeoutMs: config.timeoutMs,
       maxRetries: config.maxRetries,
     });
@@ -97,36 +118,39 @@ export class PaystackProvider implements NgPayProvider {
   // Payments
   // ─────────────────────────────────────────────────────────────────────────
 
+  async initializePayment(
+    params: PaystackPaymentParams,
+  ): Promise<PaymentResponse>;
   async initializePayment(params: PaymentParams): Promise<PaymentResponse> {
     if (params.amount.amount <= 0) {
       throw new ValidationError({
-        provider: 'paystack',
-        message: 'Amount must be greater than 0',
-        field: 'amount',
+        provider: "paystack",
+        message: "Amount must be greater than 0",
+        field: "amount",
       });
     }
 
-    const reference = params.reference ?? generateReference('pstk');
+    const reference = params.reference ?? generateReference("pstk");
+    const customerNames = this.extractCustomerNames(params.customer);
 
-    const response = await this.http.post<PaystackApiResponse<PaystackInitializeData>>(
-      '/transaction/initialize',
-      {
-        email: params.customer.email,
-        amount: params.amount.amount, // Paystack expects kobo
-        currency: params.amount.currency,
-        reference,
-        callback_url: params.callbackUrl,
-        split_code: params.splitCode,
-        metadata: {
-          ...params.metadata,
-          customer_name: params.customer.name,
-          customer_phone: params.customer.phone,
-        },
-        channels: params.channels,
-      }
-    );
+    const response = await this.http.post<
+      PaystackApiResponse<PaystackInitializeData>
+    >("/transaction/initialize", {
+      email: params.customer.email,
+      amount: params.amount.amount, // Paystack expects kobo
+      currency: params.amount.currency,
+      reference,
+      callback_url: params.callbackUrl,
+      split_code: params.splitCode,
+      metadata: {
+        ...params.metadata,
+        customer_name: customerNames.fullName,
+        customer_phone: params.customer.phone,
+      },
+      channels: params.channels,
+    });
 
-    this.assertSuccess(response.data, 'initializePayment');
+    this.assertSuccess(response.data, "initializePayment");
 
     const data = response.data.data;
 
@@ -135,7 +159,7 @@ export class PaystackProvider implements NgPayProvider {
       reference: data.reference,
       accessCode: data.access_code,
       authorizationUrl: data.authorization_url,
-      status: 'pending',
+      status: "pending",
       raw: response.data,
     };
   }
@@ -143,17 +167,17 @@ export class PaystackProvider implements NgPayProvider {
   async verifyPayment(reference: string): Promise<VerificationResponse> {
     if (!reference) {
       throw new ValidationError({
-        provider: 'paystack',
-        message: 'Reference is required',
-        field: 'reference',
+        provider: "paystack",
+        message: "Reference is required",
+        field: "reference",
       });
     }
 
-    const response = await this.http.get<PaystackApiResponse<PaystackVerifyData>>(
-      `/transaction/verify/${encodeURIComponent(reference)}`
-    );
+    const response = await this.http.get<
+      PaystackApiResponse<PaystackVerifyData>
+    >(`/transaction/verify/${encodeURIComponent(reference)}`);
 
-    this.assertSuccess(response.data, 'verifyPayment');
+    this.assertSuccess(response.data, "verifyPayment");
 
     const data = response.data.data;
 
@@ -164,15 +188,18 @@ export class PaystackProvider implements NgPayProvider {
       amount: { amount: data.amount, currency: data.currency as Currency },
       customer: {
         email: data.customer.email,
-        name: [data.customer.first_name, data.customer.last_name]
-          .filter(Boolean)
-          .join(' ') || undefined,
+        name:
+          [data.customer.first_name, data.customer.last_name]
+            .filter(Boolean)
+            .join(" ") || undefined,
         phone: data.customer.phone ?? undefined,
       },
       channel: data.channel as PaymentChannel,
       paidAt: parseDate(data.paid_at ?? undefined),
       gatewayResponse: data.gateway_response,
-      fees: data.fees ? { amount: data.fees, currency: data.currency as Currency } : undefined,
+      fees: data.fees
+        ? { amount: data.fees, currency: data.currency as Currency }
+        : undefined,
       providerReference: data.authorization?.authorization_code,
       authorizationCode: data.authorization?.authorization_code,
       raw: response.data,
@@ -183,34 +210,48 @@ export class PaystackProvider implements NgPayProvider {
   // Virtual Accounts (Dedicated NUBAN)
   // ─────────────────────────────────────────────────────────────────────────
 
-  async createVirtualAccount(params: VirtualAccountParams): Promise<VirtualAccount> {
+  async createVirtualAccount(
+    params: PaystackVirtualAccountParams,
+  ): Promise<VirtualAccount>;
+  async createVirtualAccount(
+    params: VirtualAccountParams,
+  ): Promise<VirtualAccount> {
+    if (!params.customer.phone?.trim()) {
+      throw new ValidationError({
+        provider: "paystack",
+        message: "Customer phone is required for Paystack virtual accounts",
+        field: "customer.phone",
+      });
+    }
+
     // Step 1: create or fetch the Paystack customer
+    const customerNames = this.extractCustomerNames(params.customer);
     const customerCode = await this.ensureCustomer(params.customer.email, {
-      first_name: params.customer.name?.split(' ')[0],
-      last_name: params.customer.name?.split(' ').slice(1).join(' '),
+      first_name: customerNames.firstName,
+      last_name: customerNames.lastName,
       phone: params.customer.phone,
     });
 
     // Step 2: create dedicated account
     // Bank can be overridden per-call via metadata.preferredBank, or falls back
     // to the instance-level config (default: 'wema-bank').
-    const isTestMode = this.secretKey.startsWith('sk_test_');
+    const isTestMode = this.secretKey.startsWith("sk_test_");
     const preferredBank = isTestMode
-      ? 'test-bank'
-      : (params.metadata?.['preferredBank'] as PaystackPreferredBank | undefined)
-        ?? this.preferredBank;
+      ? "test-bank"
+      : ((params.metadata?.["preferredBank"] as
+          | PaystackPreferredBank
+          | undefined) ?? this.preferredBank);
 
-      const response = await this.http.post<PaystackApiResponse<PaystackDedicatedAccount>>(
-        '/dedicated_account',
-        {
-          customer: customerCode,
-          preferred_bank: preferredBank,
-          split_code: params.splitCode,   // undefined is stripped by JSON.stringify
-          metadata: params.metadata,
-        }
-      );
+    const response = await this.http.post<
+      PaystackApiResponse<PaystackDedicatedAccount>
+    >("/dedicated_account", {
+      customer: customerCode,
+      preferred_bank: preferredBank,
+      split_code: params.splitCode, // undefined is stripped by JSON.stringify
+      metadata: params.metadata,
+    });
 
-    this.assertSuccess(response.data, 'createVirtualAccount');
+    this.assertSuccess(response.data, "createVirtualAccount");
 
     const data = response.data.data;
 
@@ -223,7 +264,7 @@ export class PaystackProvider implements NgPayProvider {
       // not the CBN bank code. We prefix with 'pstk:' to make this obvious
       // and prevent it being used directly as a CBN code downstream.
       bankCode: `pstk:${data.bank.id}`,
-      reference: params.reference ?? generateReference('va'),
+      reference: params.reference ?? generateReference("va"),
       raw: response.data,
     };
   }
@@ -232,21 +273,22 @@ export class PaystackProvider implements NgPayProvider {
   // Transfers (Payouts)
   // ─────────────────────────────────────────────────────────────────────────
 
-  async createTransferRecipient(params: TransferRecipientParams): Promise<TransferRecipient> {
-    const response = await this.http.post<PaystackApiResponse<PaystackTransferRecipientData>>(
-      '/transferrecipient',
-      {
-        type: 'nuban',
-        name: params.name,
-        account_number: params.accountNumber,
-        bank_code: params.bankCode,
-        currency: params.currency ?? 'NGN',
-        description: params.description,
-        metadata: params.metadata,
-      }
-    );
+  async createTransferRecipient(
+    params: TransferRecipientParams,
+  ): Promise<TransferRecipient> {
+    const response = await this.http.post<
+      PaystackApiResponse<PaystackTransferRecipientData>
+    >("/transferrecipient", {
+      type: "nuban",
+      name: params.name,
+      account_number: params.accountNumber,
+      bank_code: params.bankCode,
+      currency: params.currency ?? "NGN",
+      description: params.description,
+      metadata: params.metadata,
+    });
 
-    this.assertSuccess(response.data, 'createTransferRecipient');
+    this.assertSuccess(response.data, "createTransferRecipient");
 
     const data = response.data.data;
 
@@ -263,31 +305,30 @@ export class PaystackProvider implements NgPayProvider {
   }
 
   async initiateTransfer(params: TransferParams): Promise<TransferResponse> {
-    const reference = params.reference ?? generateReference('trf');
+    const reference = params.reference ?? generateReference("trf");
 
-    const response = await this.http.post<PaystackApiResponse<PaystackTransferData>>(
-      '/transfer',
-      {
-        source: 'balance',
-        amount: params.amount.amount,
-        recipient: params.recipientCode,
-        reference,
-        reason: params.description,
-        currency: params.amount.currency ?? 'NGN',
-      }
-    );
+    const response = await this.http.post<
+      PaystackApiResponse<PaystackTransferData>
+    >("/transfer", {
+      source: "balance",
+      amount: params.amount.amount,
+      recipient: params.recipientCode,
+      reference,
+      reason: params.description,
+      currency: params.amount.currency ?? "NGN",
+    });
 
-    this.assertSuccess(response.data, 'initiateTransfer');
+    this.assertSuccess(response.data, "initiateTransfer");
 
     return this.normalizeTransferResponse(response.data.data);
   }
 
   async verifyTransfer(reference: string): Promise<TransferResponse> {
-    const response = await this.http.get<PaystackApiResponse<PaystackTransferData>>(
-      `/transfer/verify/${encodeURIComponent(reference)}`
-    );
+    const response = await this.http.get<
+      PaystackApiResponse<PaystackTransferData>
+    >(`/transfer/verify/${encodeURIComponent(reference)}`);
 
-    this.assertSuccess(response.data, 'verifyTransfer');
+    this.assertSuccess(response.data, "verifyTransfer");
 
     return this.normalizeTransferResponse(response.data.data);
   }
@@ -296,23 +337,23 @@ export class PaystackProvider implements NgPayProvider {
   // Banks & Account Resolution
   // ─────────────────────────────────────────────────────────────────────────
 
-  async getBanks(country = 'nigeria'): Promise<Bank[]> {
+  async getBanks(country = "nigeria"): Promise<Bank[]> {
     const allBanks: PaystackBank[] = [];
     let page = 1;
     let hasMore = true;
-  
+
     while (hasMore) {
       const response = await this.http.get<PaystackApiResponse<PaystackBank[]>>(
-        '/bank',
-        { country, use_cursor: false, perPage: 100, page }
+        "/bank",
+        { country, use_cursor: false, perPage: 100, page },
       );
-      this.assertSuccess(response.data, 'getBanks');
+      this.assertSuccess(response.data, "getBanks");
       const batch = response.data.data;
       allBanks.push(...batch);
       hasMore = batch.length === 100;
       page++;
     }
-  
+
     return allBanks
       .filter((b: PaystackBank) => b.active && !b.is_deleted)
       .map((b: PaystackBank) => ({
@@ -327,13 +368,15 @@ export class PaystackProvider implements NgPayProvider {
       }));
   }
 
-  async resolveAccount(accountNumber: string, bankCode: string): Promise<AccountDetails> {
-    const response = await this.http.get<PaystackApiResponse<PaystackAccountResolution>>(
-      '/bank/resolve',
-      { account_number: accountNumber, bank_code: bankCode }
-    );
+  async resolveAccount(
+    accountNumber: string,
+    bankCode: string,
+  ): Promise<AccountDetails> {
+    const response = await this.http.get<
+      PaystackApiResponse<PaystackAccountResolution>
+    >("/bank/resolve", { account_number: accountNumber, bank_code: bankCode });
 
-    this.assertSuccess(response.data, 'resolveAccount');
+    this.assertSuccess(response.data, "resolveAccount");
 
     const data = response.data.data;
 
@@ -341,7 +384,7 @@ export class PaystackProvider implements NgPayProvider {
       accountNumber: data.account_number,
       accountName: data.account_name,
       bankCode,
-      bankName: '', // Paystack doesn't return bank name here; caller can enrich via getBanks()
+      bankName: "", // Paystack doesn't return bank name here; caller can enrich via getBanks()
     };
   }
 
@@ -350,39 +393,39 @@ export class PaystackProvider implements NgPayProvider {
   // ─────────────────────────────────────────────────────────────────────────
 
   verifyWebhook(payload: unknown, signature: string): boolean {
-    if (typeof payload !== 'string') {
+    if (typeof payload !== "string") {
       throw new ValidationError({
-        provider: 'paystack',
-        message: 'Webhook payload must be a raw string (Buffer.toString())',
-        field: 'payload',
+        provider: "paystack",
+        message: "Webhook payload must be a raw string (Buffer.toString())",
+        field: "payload",
       });
     }
 
-    const expected = createHmac('sha512', this.secretKey)
+    const expected = createHmac("sha512", this.secretKey)
       .update(payload)
-      .digest('hex');
+      .digest("hex");
 
     // Use timing-safe comparison to prevent timing attacks
     return timingSafeEqual(expected, signature);
   }
 
   parseWebhookEvent(payload: unknown): WebhookEvent {
-    if (typeof payload !== 'object' || payload === null) {
+    if (typeof payload !== "object" || payload === null) {
       throw new ValidationError({
-        provider: 'paystack',
-        message: 'Webhook payload must be a parsed JSON object',
-        field: 'payload',
+        provider: "paystack",
+        message: "Webhook payload must be a parsed JSON object",
+        field: "payload",
       });
     }
 
     const raw = payload as Record<string, unknown>;
-    const event = (raw['event'] as string) ?? 'unknown';
-    const data = raw['data'] as Record<string, unknown>;
+    const event = (raw["event"] as string) ?? "unknown";
+    const data = raw["data"] as Record<string, unknown>;
 
     return {
       provider: this.name,
       event: this.normalizeEventType(event),
-      reference: (data?.['reference'] as string) ?? undefined,
+      reference: (data?.["reference"] as string) ?? undefined,
       data,
       raw: payload,
     };
@@ -394,23 +437,25 @@ export class PaystackProvider implements NgPayProvider {
 
   private async ensureCustomer(
     email: string,
-    meta: { first_name?: string; last_name?: string; phone?: string }
+    meta: { first_name?: string; last_name?: string; phone: string },
   ): Promise<string> {
     // Try to create — if exists Paystack returns the existing customer
-    const response = await this.http.post<PaystackApiResponse<{ customer_code: string }>>(
-      '/customer',
-      { email, ...meta }
-    );
+    const response = await this.http.post<
+      PaystackApiResponse<{ customer_code: string }>
+    >("/customer", { email, ...meta });
 
-    this.assertSuccess(response.data, 'ensureCustomer');
+    this.assertSuccess(response.data, "ensureCustomer");
     return response.data.data.customer_code;
   }
 
-  private assertSuccess<T>(response: PaystackApiResponse<T>, operation: string): void {
+  private assertSuccess<T>(
+    response: PaystackApiResponse<T>,
+    operation: string,
+  ): void {
     if (!response.status) {
       throw new NgPayError({
         provider: this.name,
-        code: 'PROVIDER_ERROR',
+        code: "PROVIDER_ERROR",
         message: response.message ?? `Paystack ${operation} failed`,
         raw: response,
       });
@@ -419,30 +464,32 @@ export class PaystackProvider implements NgPayProvider {
 
   private normalizePaymentStatus(status: string): PaymentStatus {
     const map: Record<string, PaymentStatus> = {
-      success: 'success',
-      failed: 'failed',
-      abandoned: 'abandoned',
-      pending: 'pending',
-      processing: 'processing',
-      reversed: 'reversed',
-      queued: 'queued',
+      success: "success",
+      failed: "failed",
+      abandoned: "abandoned",
+      pending: "pending",
+      processing: "processing",
+      reversed: "reversed",
+      queued: "queued",
     };
-    return map[status] ?? 'pending';
+    return map[status] ?? "pending";
   }
 
   private normalizeTransferStatus(status: string): TransferStatus {
     const map: Record<string, TransferStatus> = {
-      success: 'success',
-      failed: 'failed',
-      pending: 'pending',
-      processing: 'processing',
-      reversed: 'reversed',
-      otp: 'otp',
+      success: "success",
+      failed: "failed",
+      pending: "pending",
+      processing: "processing",
+      reversed: "reversed",
+      otp: "otp",
     };
-    return map[status] ?? 'pending';
+    return map[status] ?? "pending";
   }
 
-  private normalizeTransferResponse(data: PaystackTransferData): TransferResponse {
+  private normalizeTransferResponse(
+    data: PaystackTransferData,
+  ): TransferResponse {
     return {
       provider: this.name,
       reference: data.reference,
@@ -455,25 +502,57 @@ export class PaystackProvider implements NgPayProvider {
 
   private normalizeEventType(event: string): WebhookEventType {
     const validEvents: WebhookEventType[] = [
-      'charge.success',
-      'charge.failed',
-      'transfer.success',
-      'transfer.failed',
-      'transfer.reversed',
-      'paymentrequest.success',
-      'subscription.create',
-      'subscription.disable',
-      'refund.processed',
-      'refund.failed',
-      'charge.dispute.create',
-      'charge.dispute.resolve',
-      'invoice.create',
-      'invoice.update',
-      'invoice.payment_failed',
+      "charge.success",
+      "charge.failed",
+      "transfer.success",
+      "transfer.failed",
+      "transfer.reversed",
+      "paymentrequest.success",
+      "subscription.create",
+      "subscription.disable",
+      "refund.processed",
+      "refund.failed",
+      "charge.dispute.create",
+      "charge.dispute.resolve",
+      "invoice.create",
+      "invoice.update",
+      "invoice.payment_failed",
     ];
     return validEvents.includes(event as WebhookEventType)
       ? (event as WebhookEventType)
-      : 'unknown';
+      : "unknown";
+  }
+
+  private extractCustomerNames(customer: PaymentParams["customer"]): {
+    firstName?: string;
+    lastName?: string;
+    fullName?: string;
+  } {
+    const withNames = customer as PaystackCustomerWithPhoneAndNames;
+    const firstNameFromFields = withNames.firstName?.trim();
+    const lastNameFromFields = withNames.lastName?.trim();
+
+    if (firstNameFromFields || lastNameFromFields) {
+      return {
+        firstName: firstNameFromFields || undefined,
+        lastName: lastNameFromFields || undefined,
+        fullName:
+          [firstNameFromFields, lastNameFromFields].filter(Boolean).join(" ") ||
+          undefined,
+      };
+    }
+
+    const name = customer.name?.trim();
+    if (!name) {
+      return {};
+    }
+
+    const [firstName, ...rest] = name.split(" ").filter(Boolean);
+    return {
+      firstName: firstName?.trim() || undefined,
+      lastName: rest.join(" ").trim() || undefined,
+      fullName: name,
+    };
   }
 }
 

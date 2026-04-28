@@ -112,6 +112,22 @@ importers:
         specifier: ^1.6.0
         version: 1.6.0(@types/node@20.0.0)
 
+  packages/router:
+    dependencies:
+      '@ng-pay/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      tsup:
+        specifier: ^8.0.0
+        version: 8.0.0(typescript@5.4.2)
+      typescript:
+        specifier: ^5.4.0
+        version: 5.4.2
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.0(@types/node@20.0.0)
+
 packages:
 
   /@esbuild/aix-ppc64@0.19.12:

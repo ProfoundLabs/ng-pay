@@ -10,6 +10,7 @@ ng-pay/
 │ ├── paystack/ # Paystack adapter
 │ ├── flutterwave/ # Flutterwave adapter
 │ ├── monnify/ # Monnify adapter
+│ ├── router/ # Intelligent provider routing, failover, and circuit breaking
 │ └── middleware/ # Express, NestJS, Fastify webhook helpers
 ├── .github/workflows/ # CI/CD
 └── README.md
@@ -41,6 +42,8 @@ cd packages/core && pnpm dev
 ## Adding a New Provider Adapter
 
 This is the most valuable contribution you can make — especially for other African markets (Ghana, Kenya, South Africa). Here's the exact pattern to follow:
+
+For non-provider packages, follow the same package scaffolding conventions used by the existing packages: `src/index.ts`, `src/<name>.provider.ts` when the package exposes a provider-style class, `src/types/<name>.types.ts` for public types, and `src/__tests__/` for Vitest coverage.
 
 ### 1. Scaffold the package
 

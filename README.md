@@ -16,6 +16,7 @@ Stop rewriting your Paystack/Flutterwave/Monnify integration every time you swit
 | [`@ng-pay/paystack`](https://npmjs.com/package/@ng-pay/paystack)       | Paystack adapter                          | [![npm](https://img.shields.io/npm/v/@ng-pay/paystack.svg)](https://www.npmjs.com/package/@ng-pay/paystack)       |
 | [`@ng-pay/flutterwave`](https://npmjs.com/package/@ng-pay/flutterwave) | Flutterwave adapter                       | [![npm](https://img.shields.io/npm/v/@ng-pay/flutterwave.svg)](https://www.npmjs.com/package/@ng-pay/flutterwave) |
 | [`@ng-pay/monnify`](https://npmjs.com/package/@ng-pay/monnify)         | Monnify adapter                           | [![npm](https://img.shields.io/npm/v/@ng-pay/monnify.svg)](https://www.npmjs.com/package/@ng-pay/monnify)         |
+| [`@ng-pay/router`](https://npmjs.com/package/@ng-pay/router)           | Intelligent provider routing and failover | [![npm](https://img.shields.io/npm/v/@ng-pay/router.svg)](https://www.npmjs.com/package/@ng-pay/router)           |
 | [`@ng-pay/middleware`](https://npmjs.com/package/@ng-pay/middleware)   | Express, NestJS & Fastify webhook helpers | [![npm](https://img.shields.io/npm/v/@ng-pay/middleware.svg)](https://www.npmjs.com/package/@ng-pay/middleware)   |
 
 ## Installation
@@ -37,6 +38,7 @@ Install the provider you need alongside core:
 npm install @ng-pay/core @ng-pay/paystack      # Paystack
 npm install @ng-pay/core @ng-pay/flutterwave   # Flutterwave
 npm install @ng-pay/core @ng-pay/monnify       # Monnify
+npm install @ng-pay/core @ng-pay/router @ng-pay/paystack @ng-pay/flutterwave  # multi-provider failover
 ```
 
 ## Quick Start
@@ -93,6 +95,36 @@ const payment = await provider.initializePayment({ ... });
 const banks   = await provider.getBanks();
 const account = await provider.resolveAccount('0123456789', '058');
 ```
+
+## Intelligent Routing And Failover
+
+Use `@ng-pay/router` when you want to wrap multiple providers behind the same `NgPayProvider` interface with automatic failover, circuit breaking, and routing strategies.
+
+```typescript
+import { ProviderRouter } from "@ng-pay/router";
+import { PaystackProvider } from "@ng-pay/paystack";
+import { FlutterwaveProvider } from "@ng-pay/flutterwave";
+
+const provider = new ProviderRouter(
+  [
+    new PaystackProvider({ secretKey: process.env.PAYSTACK_SECRET_KEY! }),
+    new FlutterwaveProvider({ secretKey: process.env.FLW_SECRET_KEY! }),
+  ],
+  {
+    strategy: "priority",
+    failureThreshold: 0.5,
+    circuitResetMs: 60_000,
+  },
+);
+
+const payment = await provider.initializePayment({
+  amount: { amount: 500_000, currency: "NGN" },
+  customer: { email: "user@example.com", name: "Jane Doe" },
+  callbackUrl: "https://myapp.com/callback",
+});
+```
+
+The router exports the same `NgPayProvider` surface area as the individual adapters, so you can add failover without changing your application-facing payment code.
 
 ## API Reference
 

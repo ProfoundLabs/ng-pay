@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PaystackProvider } from '../paystack.provider.js';
-import { ValidationError, NgPayError } from '@ng-pay/core';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { PaystackProvider } from "../paystack.provider.js";
+import { ValidationError, NgPayError } from "@ng-pay/core";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock fetch globally
@@ -15,8 +15,8 @@ function mockPaystackResponse<T>(data: T, status = 200) {
     status,
     headers: {
       get: (key: string) => {
-        if (key === 'content-type') return 'application/json';
-        if (key === 'retry-after') return null;
+        if (key === "content-type") return "application/json";
+        if (key === "retry-after") return null;
         return null;
       },
       forEach: () => {},
@@ -30,21 +30,29 @@ function mockPaystackResponse<T>(data: T, status = 200) {
 // Constructor validation
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PaystackProvider constructor', () => {
-  it('throws if no secret key provided', () => {
-    expect(() => new PaystackProvider({ secretKey: '' })).toThrow(ValidationError);
+describe("PaystackProvider constructor", () => {
+  it("throws if no secret key provided", () => {
+    expect(() => new PaystackProvider({ secretKey: "" })).toThrow(
+      ValidationError,
+    );
   });
 
-  it('throws if secret key has wrong format', () => {
-    expect(() => new PaystackProvider({ secretKey: 'bad_key' })).toThrow(ValidationError);
+  it("throws if secret key has wrong format", () => {
+    expect(() => new PaystackProvider({ secretKey: "bad_key" })).toThrow(
+      ValidationError,
+    );
   });
 
-  it('accepts valid test key', () => {
-    expect(() => new PaystackProvider({ secretKey: 'sk_test_abc123' })).not.toThrow();
+  it("accepts valid test key", () => {
+    expect(
+      () => new PaystackProvider({ secretKey: "sk_test_abc123" }),
+    ).not.toThrow();
   });
 
-  it('accepts valid live key', () => {
-    expect(() => new PaystackProvider({ secretKey: 'sk_live_abc123' })).not.toThrow();
+  it("accepts valid live key", () => {
+    expect(
+      () => new PaystackProvider({ secretKey: "sk_live_abc123" }),
+    ).not.toThrow();
   });
 });
 
@@ -52,58 +60,116 @@ describe('PaystackProvider constructor', () => {
 // initializePayment
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PaystackProvider.initializePayment', () => {
+describe("PaystackProvider.initializePayment", () => {
   let provider: PaystackProvider;
 
   beforeEach(() => {
-    provider = new PaystackProvider({ secretKey: 'sk_test_abc123', maxRetries: 0 });
+    provider = new PaystackProvider({
+      secretKey: "sk_test_abc123",
+      maxRetries: 0,
+    });
     mockFetch.mockReset();
   });
 
-  it('returns payment response with authorization URL', async () => {
+  it("returns payment response with authorization URL", async () => {
     mockPaystackResponse({
       status: true,
-      message: 'Authorization URL created',
+      message: "Authorization URL created",
       data: {
-        authorization_url: 'https://checkout.paystack.com/abc123',
-        access_code: 'abc123',
-        reference: 'pstk_1234567890_aabbccdd',
+        authorization_url: "https://checkout.paystack.com/abc123",
+        access_code: "abc123",
+        reference: "pstk_1234567890_aabbccdd",
       },
     });
 
     const result = await provider.initializePayment({
-      amount: { amount: 10_000_00, currency: 'NGN' }, // ₦100,000 in kobo
-      customer: { email: 'paul@example.com', name: 'Paul Adeyinka' },
+      amount: { amount: 10_000_00, currency: "NGN" }, // ₦100,000 in kobo
+      customer: {
+        email: "paul@example.com",
+        name: "Paul Adeyinka",
+        phone: "08012345678",
+      },
     });
 
-    expect(result.provider).toBe('paystack');
-    expect(result.authorizationUrl).toBe('https://checkout.paystack.com/abc123');
-    expect(result.status).toBe('pending');
-    expect(result.accessCode).toBe('abc123');
+    expect(result.provider).toBe("paystack");
+    expect(result.authorizationUrl).toBe(
+      "https://checkout.paystack.com/abc123",
+    );
+    expect(result.status).toBe("pending");
+    expect(result.accessCode).toBe("abc123");
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.metadata.customer_name).toBe("Paul Adeyinka");
   });
 
-  it('throws ValidationError for zero amount', async () => {
+  it("accepts customer firstName and lastName", async () => {
+    mockPaystackResponse({
+      status: true,
+      message: "Authorization URL created",
+      data: {
+        authorization_url: "https://checkout.paystack.com/abc123",
+        access_code: "abc123",
+        reference: "pstk_1234567890_aabbccdd",
+      },
+    });
+
+    await provider.initializePayment({
+      amount: { amount: 10_000_00, currency: "NGN" },
+      customer: {
+        email: "paul@example.com",
+        firstName: "Paul",
+        lastName: "Adeyinka",
+        phone: "08012345678",
+      },
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.metadata.customer_name).toBe("Paul Adeyinka");
+    expect(body.metadata.customer_phone).toBe("08012345678");
+  });
+
+  it("throws ValidationError for zero amount", async () => {
     await expect(
       provider.initializePayment({
-        amount: { amount: 0, currency: 'NGN' },
-        customer: { email: 'paul@example.com' },
-      })
+        amount: { amount: 0, currency: "NGN" },
+        customer: { email: "paul@example.com" },
+      }),
     ).rejects.toThrow(ValidationError);
   });
 
-  it('throws NgPayError when Paystack returns status: false', async () => {
+  it("throws NgPayError when Paystack returns status: false", async () => {
     mockPaystackResponse({
       status: false,
-      message: 'Email is invalid',
+      message: "Email is invalid",
       data: null,
     });
 
     await expect(
       provider.initializePayment({
-        amount: { amount: 5000, currency: 'NGN' },
-        customer: { email: 'notanemail' },
-      })
+        amount: { amount: 5000, currency: "NGN" },
+        customer: { email: "notanemail", phone: "08012345678" },
+      }),
     ).rejects.toThrow(NgPayError);
+  });
+
+  it("allows initializePayment when customer phone is missing", async () => {
+    mockPaystackResponse({
+      status: true,
+      message: "Authorization URL created",
+      data: {
+        authorization_url: "https://checkout.paystack.com/abc123",
+        access_code: "abc123",
+        reference: "pstk_1234567890_aabbccdd",
+      },
+    });
+
+    await provider.initializePayment({
+      amount: { amount: 5000, currency: "NGN" },
+      customer: { email: "paul@example.com" },
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.metadata.customer_phone).toBeUndefined();
   });
 });
 
@@ -111,60 +177,63 @@ describe('PaystackProvider.initializePayment', () => {
 // verifyPayment
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PaystackProvider.verifyPayment', () => {
+describe("PaystackProvider.verifyPayment", () => {
   let provider: PaystackProvider;
 
   beforeEach(() => {
-    provider = new PaystackProvider({ secretKey: 'sk_test_abc123', maxRetries: 0 });
+    provider = new PaystackProvider({
+      secretKey: "sk_test_abc123",
+      maxRetries: 0,
+    });
     mockFetch.mockReset();
   });
 
-  it('returns verified payment with normalized status', async () => {
+  it("returns verified payment with normalized status", async () => {
     mockPaystackResponse({
       status: true,
-      message: 'Verification successful',
+      message: "Verification successful",
       data: {
         id: 12345,
-        reference: 'my_ref_001',
-        status: 'success',
+        reference: "my_ref_001",
+        status: "success",
         amount: 50_000,
-        currency: 'NGN',
-        channel: 'card',
-        gateway_response: 'Successful',
-        paid_at: '2024-04-01T12:00:00.000Z',
+        currency: "NGN",
+        channel: "card",
+        gateway_response: "Successful",
+        paid_at: "2024-04-01T12:00:00.000Z",
         fees: 500,
         customer: {
-          email: 'paul@example.com',
-          first_name: 'Paul',
-          last_name: 'Adeyinka',
+          email: "paul@example.com",
+          first_name: "Paul",
+          last_name: "Adeyinka",
           phone: null,
-          customer_code: 'CUS_abc',
+          customer_code: "CUS_abc",
           metadata: {},
-          risk_action: 'default',
+          risk_action: "default",
           international_format_phone: null,
         },
         authorization: {},
-        domain: 'test',
-        ip_address: '127.0.0.1',
+        domain: "test",
+        ip_address: "127.0.0.1",
         metadata: {},
         message: null,
-        created_at: '2024-04-01T11:59:00.000Z',
+        created_at: "2024-04-01T11:59:00.000Z",
       },
     });
 
-    const result = await provider.verifyPayment('my_ref_001');
+    const result = await provider.verifyPayment("my_ref_001");
 
-    expect(result.status).toBe('success');
+    expect(result.status).toBe("success");
     expect(result.amount.amount).toBe(50_000);
-    expect(result.amount.currency).toBe('NGN');
-    expect(result.customer.email).toBe('paul@example.com');
-    expect(result.customer.name).toBe('Paul Adeyinka');
+    expect(result.amount.currency).toBe("NGN");
+    expect(result.customer.email).toBe("paul@example.com");
+    expect(result.customer.name).toBe("Paul Adeyinka");
     expect(result.paidAt).toBeInstanceOf(Date);
     expect(result.fees?.amount).toBe(500);
   });
 
-  it('throws ValidationError for empty reference', async () => {
-    await expect(provider.verifyPayment('')).rejects.toThrow(ValidationError);
+  it("throws ValidationError for empty reference", async () => {
+    await expect(provider.verifyPayment("")).rejects.toThrow(ValidationError);
   });
 });
 
@@ -172,29 +241,62 @@ describe('PaystackProvider.verifyPayment', () => {
 // getBanks
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PaystackProvider.getBanks', () => {
+describe("PaystackProvider.getBanks", () => {
   let provider: PaystackProvider;
 
   beforeEach(() => {
-    provider = new PaystackProvider({ secretKey: 'sk_test_abc123', maxRetries: 0 });
+    provider = new PaystackProvider({
+      secretKey: "sk_test_abc123",
+      maxRetries: 0,
+    });
     mockFetch.mockReset();
   });
 
-  it('returns filtered active banks', async () => {
+  it("returns filtered active banks", async () => {
     mockPaystackResponse({
       status: true,
-      message: 'Banks retrieved',
+      message: "Banks retrieved",
       data: [
-        { id: 1, name: 'GTBank', slug: 'guaranty-trust-bank', code: '058', active: true, is_deleted: false, country: 'Nigeria', currency: 'NGN', longcode: '', gateway: null, pay_with_bank: true, type: 'nuban', createdAt: '', updatedAt: '' },
-        { id: 2, name: 'Deleted Bank', slug: 'deleted', code: '999', active: false, is_deleted: true, country: 'Nigeria', currency: 'NGN', longcode: '', gateway: null, pay_with_bank: false, type: 'nuban', createdAt: '', updatedAt: '' },
+        {
+          id: 1,
+          name: "GTBank",
+          slug: "guaranty-trust-bank",
+          code: "058",
+          active: true,
+          is_deleted: false,
+          country: "Nigeria",
+          currency: "NGN",
+          longcode: "",
+          gateway: null,
+          pay_with_bank: true,
+          type: "nuban",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: 2,
+          name: "Deleted Bank",
+          slug: "deleted",
+          code: "999",
+          active: false,
+          is_deleted: true,
+          country: "Nigeria",
+          currency: "NGN",
+          longcode: "",
+          gateway: null,
+          pay_with_bank: false,
+          type: "nuban",
+          createdAt: "",
+          updatedAt: "",
+        },
       ],
     });
 
     const banks = await provider.getBanks();
 
     expect(banks).toHaveLength(1);
-    expect(banks[0]?.name).toBe('GTBank');
-    expect(banks[0]?.code).toBe('058');
+    expect(banks[0]?.name).toBe("GTBank");
+    expect(banks[0]?.code).toBe("058");
     expect(banks[0]?.active).toBe(true);
   });
 });
@@ -203,29 +305,36 @@ describe('PaystackProvider.getBanks', () => {
 // verifyWebhook
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PaystackProvider.verifyWebhook', () => {
+describe("PaystackProvider.verifyWebhook", () => {
   let provider: PaystackProvider;
-  const secretKey = 'sk_test_mysecretkey';
+  const secretKey = "sk_test_mysecretkey";
 
   beforeEach(() => {
     provider = new PaystackProvider({ secretKey });
   });
 
-  it('returns true for a valid signature', () => {
-    const { createHmac } = require('crypto');
-    const payload = JSON.stringify({ event: 'charge.success', data: { reference: 'ref123' } });
-    const signature = createHmac('sha512', secretKey).update(payload).digest('hex');
+  it("returns true for a valid signature", () => {
+    const { createHmac } = require("crypto");
+    const payload = JSON.stringify({
+      event: "charge.success",
+      data: { reference: "ref123" },
+    });
+    const signature = createHmac("sha512", secretKey)
+      .update(payload)
+      .digest("hex");
 
     expect(provider.verifyWebhook(payload, signature)).toBe(true);
   });
 
-  it('returns false for an invalid signature', () => {
-    const payload = JSON.stringify({ event: 'charge.success' });
-    expect(provider.verifyWebhook(payload, 'badsignature')).toBe(false);
+  it("returns false for an invalid signature", () => {
+    const payload = JSON.stringify({ event: "charge.success" });
+    expect(provider.verifyWebhook(payload, "badsignature")).toBe(false);
   });
 
-  it('throws ValidationError for non-string payload', () => {
-    expect(() => provider.verifyWebhook({ not: 'a string' }, 'sig')).toThrow(ValidationError);
+  it("throws ValidationError for non-string payload", () => {
+    expect(() => provider.verifyWebhook({ not: "a string" }, "sig")).toThrow(
+      ValidationError,
+    );
   });
 });
 
@@ -233,36 +342,38 @@ describe('PaystackProvider.verifyWebhook', () => {
 // parseWebhookEvent
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PaystackProvider.parseWebhookEvent', () => {
+describe("PaystackProvider.parseWebhookEvent", () => {
   let provider: PaystackProvider;
 
   beforeEach(() => {
-    provider = new PaystackProvider({ secretKey: 'sk_test_abc123' });
+    provider = new PaystackProvider({ secretKey: "sk_test_abc123" });
   });
 
-  it('parses a charge.success event', () => {
+  it("parses a charge.success event", () => {
     const payload = {
-      event: 'charge.success',
-      data: { reference: 'ref_123', amount: 50_000 },
+      event: "charge.success",
+      data: { reference: "ref_123", amount: 50_000 },
     };
 
     const event = provider.parseWebhookEvent(payload);
 
-    expect(event.provider).toBe('paystack');
-    expect(event.event).toBe('charge.success');
-    expect(event.reference).toBe('ref_123');
+    expect(event.provider).toBe("paystack");
+    expect(event.event).toBe("charge.success");
+    expect(event.reference).toBe("ref_123");
   });
 
-  it('sets unknown for unrecognized event types', () => {
+  it("sets unknown for unrecognized event types", () => {
     const event = provider.parseWebhookEvent({
-      event: 'some.future.event',
+      event: "some.future.event",
       data: {},
     });
-    expect(event.event).toBe('unknown');
+    expect(event.event).toBe("unknown");
   });
 
-  it('throws ValidationError for non-object payload', () => {
-    expect(() => provider.parseWebhookEvent('not an object')).toThrow(ValidationError);
+  it("throws ValidationError for non-object payload", () => {
+    expect(() => provider.parseWebhookEvent("not an object")).toThrow(
+      ValidationError,
+    );
     expect(() => provider.parseWebhookEvent(null)).toThrow(ValidationError);
   });
 });
@@ -271,128 +382,231 @@ describe('PaystackProvider.parseWebhookEvent', () => {
 // createVirtualAccount — preferred bank configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PaystackProvider.createVirtualAccount — preferred bank', () => {
+describe("PaystackProvider.createVirtualAccount — preferred bank", () => {
   beforeEach(() => mockFetch.mockReset());
 
   function mockCustomer() {
-    mockPaystackResponse({ status: true, message: 'Customer created', data: { customer_code: 'CUS_abc' } });
-  }
-  function mockDedicatedAccount(bankSlug = 'wema-bank') {
     mockPaystackResponse({
       status: true,
-      message: 'NUBAN successfully created',
+      message: "Customer created",
+      data: { customer_code: "CUS_abc" },
+    });
+  }
+  function mockDedicatedAccount(bankSlug = "wema-bank") {
+    mockPaystackResponse({
+      status: true,
+      message: "NUBAN successfully created",
       data: {
-        account_number: '9876543210',
-        account_name: 'Paul A. / Test Co',
-        bank: { name: bankSlug === 'titan-paystack' ? 'Titan Trust Bank' : 'Wema Bank', id: bankSlug === 'titan-paystack' ? 51 : 20, slug: bankSlug },
+        account_number: "9876543210",
+        account_name: "Paul A. / Test Co",
+        bank: {
+          name:
+            bankSlug === "titan-paystack" ? "Titan Trust Bank" : "Wema Bank",
+          id: bankSlug === "titan-paystack" ? 51 : 20,
+          slug: bankSlug,
+        },
         assigned: true,
-        currency: 'NGN',
+        currency: "NGN",
         metadata: null,
         active: true,
         id: 1,
-        created_at: '2024-04-01T00:00:00.000Z',
-        updated_at: '2024-04-01T00:00:00.000Z',
-        assignment: { integration: 1, assignee_id: 1, assignee_type: 'Customer', expired: false, account_type: 'PAY-WITH-TRANSFER', assigned_at: '' },
-        customer: { id: 1, first_name: 'Paul', last_name: 'A.', email: 'paul@example.com', customer_code: 'CUS_abc', phone: null, metadata: {}, risk_action: 'default', international_format_phone: null },
+        created_at: "2024-04-01T00:00:00.000Z",
+        updated_at: "2024-04-01T00:00:00.000Z",
+        assignment: {
+          integration: 1,
+          assignee_id: 1,
+          assignee_type: "Customer",
+          expired: false,
+          account_type: "PAY-WITH-TRANSFER",
+          assigned_at: "",
+        },
+        customer: {
+          id: 1,
+          first_name: "Paul",
+          last_name: "A.",
+          email: "paul@example.com",
+          customer_code: "CUS_abc",
+          phone: null,
+          metadata: {},
+          risk_action: "default",
+          international_format_phone: null,
+        },
       },
     });
   }
 
-  it('automatically uses test-bank in test mode regardless of preferredBank config', async () => {
-    const provider = new PaystackProvider({ secretKey: 'sk_test_abc123', maxRetries: 0 });
-    mockCustomer();
-    mockDedicatedAccount('test-bank');
-
-    await provider.createVirtualAccount({ customer: { email: 'paul@example.com' } });
-
-    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
-    expect(body.preferred_bank).toBe('test-bank');
-  });
-
-  it('ignores preferredBank config in test mode — always uses test-bank', async () => {
+  it("automatically uses test-bank in test mode regardless of preferredBank config", async () => {
     const provider = new PaystackProvider({
-      secretKey: 'sk_test_abc123',
-      preferredBank: 'titan-paystack', // should be ignored in test mode
+      secretKey: "sk_test_abc123",
       maxRetries: 0,
     });
     mockCustomer();
-    mockDedicatedAccount('test-bank');
-
-    await provider.createVirtualAccount({ customer: { email: 'paul@example.com' } });
-
-    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
-    expect(body.preferred_bank).toBe('test-bank');
-  });
-
-  it('ignores metadata.preferredBank override in test mode — always uses test-bank', async () => {
-    const provider = new PaystackProvider({
-      secretKey: 'sk_test_abc123',
-      maxRetries: 0,
-    });
-    mockCustomer();
-    mockDedicatedAccount('test-bank');
+    mockDedicatedAccount("test-bank");
 
     await provider.createVirtualAccount({
-      customer: { email: 'paul@example.com' },
-      metadata: { preferredBank: 'sterling-bank' }, // should be ignored in test mode
+      customer: { email: "paul@example.com", phone: "08012345678" },
     });
 
     const body = JSON.parse(mockFetch.mock.calls[1][1].body);
-    expect(body.preferred_bank).toBe('test-bank');
+    expect(body.preferred_bank).toBe("test-bank");
   });
 
-  it('uses preferredBank from constructor config in live mode', async () => {
+  it("ignores preferredBank config in test mode — always uses test-bank", async () => {
     const provider = new PaystackProvider({
-      secretKey: 'sk_live_abc123',
-      preferredBank: 'titan-paystack',
+      secretKey: "sk_test_abc123",
+      preferredBank: "titan-paystack", // should be ignored in test mode
       maxRetries: 0,
     });
     mockCustomer();
-    mockDedicatedAccount('titan-paystack');
-
-    await provider.createVirtualAccount({ customer: { email: 'paul@example.com' } });
-
-    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
-    expect(body.preferred_bank).toBe('titan-paystack');
-  });
-
-  it('per-call metadata.preferredBank overrides constructor default in live mode', async () => {
-    const provider = new PaystackProvider({
-      secretKey: 'sk_live_abc123',
-      preferredBank: 'wema-bank',
-      maxRetries: 0,
-    });
-    mockCustomer();
-    mockDedicatedAccount('sterling-bank');
+    mockDedicatedAccount("test-bank");
 
     await provider.createVirtualAccount({
-      customer: { email: 'paul@example.com' },
-      metadata: { preferredBank: 'sterling-bank' },
+      customer: { email: "paul@example.com", phone: "08012345678" },
     });
 
     const body = JSON.parse(mockFetch.mock.calls[1][1].body);
-    expect(body.preferred_bank).toBe('sterling-bank');
+    expect(body.preferred_bank).toBe("test-bank");
   });
 
-  it('defaults to wema-bank in live mode when no preferredBank set', async () => {
-    const provider = new PaystackProvider({ secretKey: 'sk_live_abc123', maxRetries: 0 });
+  it("ignores metadata.preferredBank override in test mode — always uses test-bank", async () => {
+    const provider = new PaystackProvider({
+      secretKey: "sk_test_abc123",
+      maxRetries: 0,
+    });
     mockCustomer();
-    mockDedicatedAccount('wema-bank');
+    mockDedicatedAccount("test-bank");
 
-    await provider.createVirtualAccount({ customer: { email: 'paul@example.com' } });
+    await provider.createVirtualAccount({
+      customer: { email: "paul@example.com", phone: "08012345678" },
+      metadata: { preferredBank: "sterling-bank" }, // should be ignored in test mode
+    });
 
     const body = JSON.parse(mockFetch.mock.calls[1][1].body);
-    expect(body.preferred_bank).toBe('wema-bank');
+    expect(body.preferred_bank).toBe("test-bank");
   });
 
-  it('bankCode is prefixed with pstk: to distinguish from CBN codes', async () => {
-    const provider = new PaystackProvider({ secretKey: 'sk_test_abc123', maxRetries: 0 });
+  it("uses preferredBank from constructor config in live mode", async () => {
+    const provider = new PaystackProvider({
+      secretKey: "sk_live_abc123",
+      preferredBank: "titan-paystack",
+      maxRetries: 0,
+    });
     mockCustomer();
-    mockDedicatedAccount('wema-bank');
+    mockDedicatedAccount("titan-paystack");
 
-    const account = await provider.createVirtualAccount({ customer: { email: 'paul@example.com' } });
+    await provider.createVirtualAccount({
+      customer: { email: "paul@example.com", phone: "08012345678" },
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(body.preferred_bank).toBe("titan-paystack");
+  });
+
+  it("per-call metadata.preferredBank overrides constructor default in live mode", async () => {
+    const provider = new PaystackProvider({
+      secretKey: "sk_live_abc123",
+      preferredBank: "wema-bank",
+      maxRetries: 0,
+    });
+    mockCustomer();
+    mockDedicatedAccount("sterling-bank");
+
+    await provider.createVirtualAccount({
+      customer: { email: "paul@example.com", phone: "08012345678" },
+      metadata: { preferredBank: "sterling-bank" },
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(body.preferred_bank).toBe("sterling-bank");
+  });
+
+  it("defaults to wema-bank in live mode when no preferredBank set", async () => {
+    const provider = new PaystackProvider({
+      secretKey: "sk_live_abc123",
+      maxRetries: 0,
+    });
+    mockCustomer();
+    mockDedicatedAccount("wema-bank");
+
+    await provider.createVirtualAccount({
+      customer: { email: "paul@example.com", phone: "08012345678" },
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(body.preferred_bank).toBe("wema-bank");
+  });
+
+  it("bankCode is prefixed with pstk: to distinguish from CBN codes", async () => {
+    const provider = new PaystackProvider({
+      secretKey: "sk_test_abc123",
+      maxRetries: 0,
+    });
+    mockCustomer();
+    mockDedicatedAccount("wema-bank");
+
+    const account = await provider.createVirtualAccount({
+      customer: { email: "paul@example.com", phone: "08012345678" },
+    });
 
     expect(account.bankCode).toMatch(/^pstk:/);
-    expect(account.bankCode).toBe('pstk:20');
+    expect(account.bankCode).toBe("pstk:20");
+  });
+
+  it("accepts customer firstName and lastName for virtual accounts", async () => {
+    const provider = new PaystackProvider({
+      secretKey: "sk_test_abc123",
+      maxRetries: 0,
+    });
+    mockCustomer();
+    mockDedicatedAccount("test-bank");
+
+    await provider.createVirtualAccount({
+      customer: {
+        email: "paul@example.com",
+        firstName: "Paul",
+        lastName: "Adeyinka",
+        phone: "08012345678",
+      },
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.first_name).toBe("Paul");
+    expect(body.last_name).toBe("Adeyinka");
+    expect(body.phone).toBe("08012345678");
+  });
+
+  it("accepts legacy customer name for virtual accounts", async () => {
+    const provider = new PaystackProvider({
+      secretKey: "sk_test_abc123",
+      maxRetries: 0,
+    });
+    mockCustomer();
+    mockDedicatedAccount("test-bank");
+
+    await provider.createVirtualAccount({
+      customer: {
+        email: "paul@example.com",
+        name: "Paul Adeyinka",
+        phone: "08012345678",
+      },
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.first_name).toBe("Paul");
+    expect(body.last_name).toBe("Adeyinka");
+    expect(body.phone).toBe("08012345678");
+  });
+
+  it("throws ValidationError for virtual account when customer phone is missing", async () => {
+    const provider = new PaystackProvider({
+      secretKey: "sk_test_abc123",
+      maxRetries: 0,
+    });
+
+    await expect(
+      provider.createVirtualAccount({
+        customer: { email: "paul@example.com" },
+      }),
+    ).rejects.toThrow(ValidationError);
   });
 });
