@@ -47,7 +47,7 @@ const payment = await paystack.initializePayment({
     firstName: "Adaobi",
     lastName: "Nwosu",
   },
-  reference: "order_123", // optional — auto-generated if omitted
+  reference: "order_123", // optional
   callbackUrl: "https://yourapp.com/payment/callback",
   channels: ["card", "bank_transfer"], // optional
 });
